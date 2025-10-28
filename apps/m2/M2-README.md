@@ -18,6 +18,6 @@
 1.New API: bs4/replacer.py
 2.Tests: bs4/tests/test_replacer.py
 ```bash
-pytest beautifulsoup/bs4/tests/test_replacer.py -q
+pytest bs4/tests/test_replacer.py -q
 ```
 Expected: 2 passed
