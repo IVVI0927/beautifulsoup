@@ -151,6 +151,21 @@ class BeautifulSoupHTMLParser(HTMLParser, DetectsXMLParsedAsHTML):
             an empty-element tag (i.e. there is not expected to be any
             closing tag).
         """
+        # Milestone-3: apply replacer transforms during parsing (start tag)
+        replacer = getattr(self.soup.builder, "_replacer", None)
+        if replacer is not None:
+            # Transform tag name and attributes BEFORE Tag creation
+            try:
+                mapped_name = replacer.map_name(name, attrs)
+            except Exception:
+                mapped_name = name
+            try:
+                mapped_attrs = replacer.map_attrs(mapped_name, attrs)
+            except Exception:
+                mapped_attrs = attrs
+            name = mapped_name or name
+            if isinstance(mapped_attrs, dict):
+                attrs = list(mapped_attrs.items())
         # TODO: handle namespaces here?
         attr_dict: AttributeDict = self.attribute_dict_class()
         for key, value in attrs:
@@ -182,6 +197,12 @@ class BeautifulSoupHTMLParser(HTMLParser, DetectsXMLParsedAsHTML):
         tag = self.soup.handle_starttag(
             name, None, None, attr_dict, sourceline=sourceline, sourcepos=sourcepos
         )
+        # Milestone-3: allow side-effect transformer AFTER Tag creation
+        if replacer is not None:
+            try:
+                replacer.on_tag_created(tag)
+            except Exception:
+                pass
         if tag and tag.is_empty_element and handle_empty_element:
             # Unlike other parsers, html.parser doesn't send separate end tag
             # events for empty-element tags. (It's handled in
@@ -209,6 +230,13 @@ class BeautifulSoupHTMLParser(HTMLParser, DetectsXMLParsedAsHTML):
            be the closing portion of an empty-element tag,
            e.g. '<tag></tag>'.
         """
+        # Milestone-3: keep end-tag name consistent with start-tag mapping
+        replacer = getattr(self.soup.builder, "_replacer", None)
+        if replacer is not None:
+            try:
+                name = replacer.map_name(name, {}) or name
+            except Exception:
+                pass
         # print("END", name)
         if check_already_closed and name in self.already_closed_empty_element:
             # This is a redundant end tag for an empty-element tag.

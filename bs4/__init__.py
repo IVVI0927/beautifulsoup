@@ -1018,9 +1018,18 @@ class BeautifulSoup(Tag):
 
         :meta private:
         """
-        # Milestone-2: perform tag-name replacement during parsing (start tags)
+        # Milestone-3: apply replacer transforms during parsing (start tag)
         if getattr(self, "replacer", None):
-            name = self.replacer.replace(name)
+            # 1) transform name and attrs BEFORE creating the Tag
+            try:
+                mapped_name = self.replacer.map_name(name, attrs)
+            except Exception:
+                mapped_name = name
+            try:
+                mapped_attrs = self.replacer.map_attrs(mapped_name, attrs)
+            except Exception:
+                mapped_attrs = attrs
+            name, attrs = mapped_name or name, mapped_attrs or attrs
 
         # print("Start tag %s: %s" % (name, attrs))
         self.endData()
@@ -1055,6 +1064,12 @@ class BeautifulSoup(Tag):
             self._most_recent_element.next_element = tag
         self._most_recent_element = tag
         self.pushTag(tag)
+        # Milestone-3: allow side-effect transformer AFTER Tag is created
+        if getattr(self, "replacer", None):
+            try:
+                self.replacer.on_tag_created(tag)
+            except Exception:
+                pass
         return tag
 
     def handle_endtag(self, name: str, nsprefix: Optional[str] = None) -> None:
@@ -1065,9 +1080,12 @@ class BeautifulSoup(Tag):
 
         :meta private:
         """
-        # Milestone-2: perform tag-name replacement during parsing (end tags)
+        # Milestone-3: keep end-tag name consistent with start-tag mapping
         if getattr(self, "replacer", None):
-            name = self.replacer.replace(name)
+            try:
+                name = self.replacer.map_name(name, {}) or name
+            except Exception:
+                pass
 
         # print("End tag: " + name)
         self.endData()
