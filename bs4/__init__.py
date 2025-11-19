@@ -206,6 +206,17 @@ class BeautifulSoup(Tag):
     #: could not be represented in Unicode.
     contains_replacement_characters: bool
 
+    def __iter__(self) -> Iterator[PageElement]:
+        # Depth-first iteration over every node in the soup tree.
+        stack: List[PageElement] = [self]
+        while stack:
+            node = stack.pop()
+            yield node
+            if isinstance(node, Tag):
+                children = node.contents
+                if children:
+                    stack.extend(reversed(children))
+
     def __init__(
         self,
         markup: _IncomingMarkup = "",
